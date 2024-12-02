@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liga MX</title>
+  <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <h1>Equipos Liga MX</h1>
+
+  <div class="search-container">
+  <label for="searchId">Buscar por ID:</label>
+  <input type="number" id="buscarId" placeholder="Ingrese el ID del equipo" />
+  <button onclick="BuscarEquipo()">Buscar</button>
+  <button onclick="EditarEquipo()">Editar</button>
+  <button onclick="EliminarEquipo()">Eliminar</button>
+  </div>
+
+  <form id="equipo-form">
+    <input type="hidden" id="id_equipo" />
+    <label>Nombre del Equipo:</label>
+    <input type="text" id="nombre_equipo" required />
+    <label>Ciudad:</label>
+    <input type="text" id="ciudad" required />
+    <label>Fundación:</label>
+    <input type="number" id="fundacion" required />
+    <label>Colores:</label>
+    <input type="text" id="colores" />
+    <label>Estadio:</label>
+    <input type="text" id="estadio" />
+    <label>Títulos:</label>
+    <input type="number" id="titulos" />
+    <button type="button" id="guardar">Guardar</button>
+    <button type="button" id="limpiar-btn">Limpiar Campos</button>
+  </form>
+  <div id="wrapper"></div>
+  <div id="pdfViewer"></div>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/equipos';
+
+    document.getElementById('limpiar-btn').addEventListener('click', () => {
+      document.getElementById('equipo-form').reset();
+    });
+
+    // Busqueda
+    const BuscarEquipo = async () => {
+      const id = document.getElementById('buscarId').value;
+      if (!id) {
+        alert('Por favor ingresa un ID');
+        return;
+      }
+
+      const response = await fetch(`${apiUrl}/${id}`);
+      const equipo = await response.json();
+
+      if (equipo) {
+        alert(`Equipo encontrado: \n Id: ${equipo.id_equipo} \n Nombre: ${equipo.nombre_equipo}\n Ciudad: ${equipo.ciudad}\n Ano fundacion: ${equipo.fundacion}\n Colores: ${equipo.colores}\n Estadio: ${equipo.estadio} \n Titulos: ${equipo.titulos}`);
+        console.log(equipo);
+      } else {
+        alert('Equipo no encontrado');
+      }
+    };
+
+  // Editar
+const EditarEquipo = async () => {
+  const id = document.getElementById('buscarId').value;
+  if (!id) {
+    alert('Por favor, ingresa un ID para editar');
+    return;
+  }
+  
+
+  // Obtener el equipo por ID
+  const equipo = await fetch(`${apiUrl}/${id}`).then(res => res.json());
+
+  if (equipo) {
+    // Rellenar los datos del formulario con el equipo encontrado
+    document.getElementById('id_equipo').value = equipo.id_equipo;
+    document.getElementById('nombre_equipo').value = equipo.nombre_equipo;
+    document.getElementById('ciudad').value = equipo.ciudad;
+    document.getElementById('fundacion').value = equipo.fundacion;
+    document.getElementById('colores').value = equipo.colores;
+    document.getElementById('estadio').value = equipo.estadio;
+    document.getElementById('titulos').value = equipo.titulos;
+
+    // Guardar cambios y actualizar el grid
+    const guardarCambios = document.getElementById('guardarCambios');
+    guardarCambios.onclick = async () => {
+      const updatedEquipo = {
+        id_equipo: document.getElementById('id_equipo').value,
+        nombre_equipo: document.getElementById('nombre_equipo').value,
+        ciudad: document.getElementById('ciudad').value,
+        fundacion: document.getElementById('fundacion').value,
+        colores: document.getElementById('colores').value,
+        estadio: document.getElementById('estadio').value,
+        titulos: document.getElementById('titulos').value,
+      };
+      
+
+      await fetch(`${apiUrl}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatedEquipo),
+      });
+
+      // Obtener los datos actualizados y actualizar el grid
+      const data = await fetch(apiUrl).then(res => res.json());
+      grid.updateConfig({
+        data: data.map(e => [e.id_equipo, e.nombre_equipo, e.ciudad, e.fundacion, e.colores, e.estadio, e.titulos]),
+      }).forceRender();
+
+      alert('Equipo editado exitosamente');
+    };
+  } else {
+    alert('No se encontró un equipo con ese ID');
+  }
+};
+
+
+
+  // Eliminar
+const EliminarEquipo = async () => {
+  const id = document.getElementById('buscarId').value;
+  if (!id) {
+    alert('Por favor ingresa un ID para eliminar');
+    return;
+  }
+
+  const confirmDelete = confirm('¿Estás seguro de que deseas eliminar este equipo?');
+  if (confirmDelete) {
+    await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+    const data = await fetch(apiUrl).then(res => res.json());
+
+    // Actualiza el grid con la nueva data y fuerza el renderizado
+    grid.updateConfig({
+      data: data.map(e => [e.id_equipo, e.nombre_equipo, e.ciudad, e.fundacion, e.colores, e.estadio, e.titulos])
+    }).forceRender();
+
+    alert('Equipo eliminado');
+  }
+};
+
+// Variable global para el grid
+let grid;
+
+// Mostrar Tabla
+const renderGrid = async () => {
+  const data = await fetch(apiUrl).then(res => res.json());
+
+  // Inicializar el grid solo una vez
+  if (!grid) {
+    grid = new gridjs.Grid({
+      columns: ['ID', 'Nombre', 'Ciudad', 'Fundación', 'Colores', 'Estadio', 'Títulos'],
+      data: data.map(e => [e.id_equipo, e.nombre_equipo, e.ciudad, e.fundacion, e.colores, e.estadio, e.titulos]),
+      search: true,
+      pagination: {
+        enabled: true,
+      }
+    }).render(document.getElementById("wrapper"));
+  } else {
+    // Si el grid ya está inicializado, actualiza los datos
+    grid.updateConfig({
+      data: data.map(e => [e.id_equipo, e.nombre_equipo, e.ciudad, e.fundacion, e.colores, e.estadio, e.titulos])
+    }).forceRender();
+  }
+};
+
+    // Agregar
+    document.getElementById('guardar').addEventListener('click', async (e) => 
+      {
+        e.preventDefault();
+        const id = document.getElementById('id_equipo').value;
+        const equipo = 
+        {
+          nombre_equipo: document.getElementById('nombre_equipo').value,
+          ciudad: document.getElementById('ciudad').value,
+          fundacion: document.getElementById('fundacion').value,
+          colores: document.getElementById('colores').value,
+          estadio: document.getElementById('estadio').value,
+          titulos: document.getElementById('titulos').value,
+        };
+
+        let resp;
+        if (id) {
+          resp = await fetch(`${apiUrl}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(equipo),
+          });
+        } else {
+          resp = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(equipo),
+          });
+
+          if (resp.ok) {
+          try {
+            const blob = await resp.blob(); // Obtener el PDF como blob
+            const pdfURL = window.URL.createObjectURL(blob);
+
+      
+            const newWindow = window.open(pdfURL, '_blank');
+            if (!newWindow) {
+              console.log("La ventana emergente fue bloqueada");
+            }
+
+            // Crear un iframe para mostrar el PDF en la página
+            // const pdfViewer = document.getElementById('pdfViewer');
+            // pdfViewer.innerHTML = ''; // Limpiar visor previo
+
+            const iframe = document.createElement('iframe');
+            iframe.src = pdfURL;
+            iframe.width = '100%';
+            iframe.height = '500px';
+            //pdfViewer.appendChild(iframe);
+
+            setTimeout(() => window.URL.revokeObjectURL(pdfURL), 1000);
+          } catch (error) {
+            console.error('Error al obtener el PDF:', error);
+            alert('Hubo un error al generar el PDF.');
+          }
+        } else {
+          alert('Error al generar el equipo.');
+        }
+        }
+
+        // if (resp.ok) {
+        //   try {
+        //     const blob = await resp.blob(); // Obtener el PDF como blob
+        //     const pdfURL = window.URL.createObjectURL(blob);
+
+      
+        //     const newWindow = window.open(pdfURL, '_blank');
+        //     if (!newWindow) {
+        //       console.log("La ventana emergente fue bloqueada");
+        //     }
+
+        //     // Crear un iframe para mostrar el PDF en la página
+        //     // const pdfViewer = document.getElementById('pdfViewer');
+        //     // pdfViewer.innerHTML = ''; // Limpiar visor previo
+
+        //     const iframe = document.createElement('iframe');
+        //     iframe.src = pdfURL;
+        //     iframe.width = '100%';
+        //     iframe.height = '500px';
+        //     //pdfViewer.appendChild(iframe);
+
+        //     setTimeout(() => window.URL.revokeObjectURL(pdfURL), 1000);
+        //   } catch (error) {
+        //     console.error('Error al obtener el PDF:', error);
+        //     alert('Hubo un error al generar el PDF.');
+        //   }
+        // } else {
+        //   alert('Error al generar el equipo.');
+        // }
+
+        renderGrid();
+      }
+);
+
+// Evento para manejar el clic en las filas
+// Evento para manejar el clic en las filas
+// document.getElementById('wrapper').addEventListener('click', function(e) {
+//   // Verifica que el clic fue en una fila
+//   const row = e.target.closest('tr');
+  
+//   // Asegurarse de que se ha hecho clic en una fila válida
+//   if (row && row.querySelectorAll('td').length > 0) {
+//     // Obtener todas las celdas de la fila seleccionada
+//     const cells = row.getElementsByTagName('td');
+
+//     // Asignar los valores de las celdas a las cajas de texto
+//     document.getElementById('campo1').value = cells[1].innerText;
+//     document.getElementById('campo2').value = cells[2].innerText;
+//     document.getElementById('campo3').value = cells[3].innerText;
+//     document.getElementById('campo4').value = cells[4].innerText;
+//     document.getElementById('campo5').value = cells[5].innerText;
+//     document.getElementById('campo6').value = cells[6].innerText;
+//   }
+// });
+
+renderGrid();
+
+  </script>
+</body>
+</html>
