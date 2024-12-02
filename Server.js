@@ -12,10 +12,11 @@ app.use(cors());
 
 
 const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'Grijalva0604',
-  database: 'ligamx',
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT,
 });
 
 app.get('/equipos', async (req, res) => {
