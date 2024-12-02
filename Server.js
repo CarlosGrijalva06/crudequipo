@@ -4,7 +4,11 @@ const cors = require('cors');
 const {jsPDF} = require('jspdf');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
 
+require('dotenv').config({path: path.join(__dirname,'.env')})
+
+dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -15,7 +19,7 @@ const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
+  database: process.env.MYSQL_DATABASE,
   port: process.env.MYSQLPORT,
 });
 
